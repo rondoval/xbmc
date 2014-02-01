@@ -12,8 +12,8 @@ EXCLUDED_ADDONS = screensaver.rsxs.euphoria visualization.dxspectrum visualizati
 
 XBMCROOT = $(shell cd $(CURDIR)/../../..; pwd)
 COPYDIRS = system addons language media
-AAPT = $(SDKROOT)/platform-tools/aapt
-DX = $(SDKROOT)/platform-tools/dx
+AAPT = $(SDKROOT)/build-tools/19.0.1/aapt
+DX = $(SDKROOT)/build-tools/19.0.1/dx
 GCC_VERSION=$(shell $(CC) -dumpversion)
 
 X86OVERRIDES=XBMC_OVERRIDE_HOST=i686-android-linux XBMC_OVERRIDE_TOOLCHAIN=$(XBMC_X86_TOOLCHAIN)
