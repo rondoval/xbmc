@@ -106,7 +106,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
                               (CAEUtil::DataFormatToBits(AE_FMT_S16LE) / 8);
   m_min_frames              = min_buffer_size / m_sink_frameSize;
   m_audiotrackbuffer_sec    = (double)m_min_frames / (double)m_format.m_sampleRate;
-  m_at_jni                  = new CJNIAudioTrack( CJNIAudioManager::STREAM_MUSIC,
+  m_at_jni                  = new CJNIAudioTrack( m_passthrough ? CJNIAudioManager::STREAM_VOICE_CALL : CJNIAudioManager::STREAM_MUSIC,
                                                   m_format.m_sampleRate,
                                                   CJNIAudioFormat::CHANNEL_OUT_STEREO,
                                                   CJNIAudioFormat::ENCODING_PCM_16BIT,
