@@ -31,26 +31,34 @@
 #include "threads/Thread.h"
 #include "openssl/crypto.h"
 
-static CCriticalSection** m_sslLockArray;
+static CCriticalSection** m_sslLockArray = NULL;
 
-extern "C" void ssl_lock_callback(int mode, int type, char *file, int line)
+#ifdef __cplusplus
+extern "C"
 {
-  (void)file;
-  (void)line;
+#endif
+
+void ssl_lock_callback(int mode, int type, char *file, int line)
+{
+  if (!m_sslLockArray)
+    return;
+
   if (mode & CRYPTO_LOCK)
     m_sslLockArray[type]->lock();
   else
     m_sslLockArray[type]->unlock();
 }
 
-extern "C" unsigned long ssl_thread_id(void)
+unsigned long ssl_thread_id(void)
 {
-  unsigned long ret;
+  return (unsigned long)CThread::GetCurrentThreadId();
+}
 
-  ret=(unsigned long)CThread::GetCurrentThreadId();
-  return(ret);
+#ifdef __cplusplus
 }
 #endif
+
+#endif // HAVE_OPENSSL
 
 using namespace XCURL;
 
@@ -84,13 +92,10 @@ bool DllLibCurlGlobal::Load()
   /* check idle will clean up the last one */
   g_curlReferences = 2;
 
-#if defined(TARGET_ANDROID) || defined(TARGET_DARWIN_OSX) || defined(TARGET_DARWIN_IOS)
+#if defined(HAS_CURL_STATIC)
   // Initialize ssl locking array
-  int i;
- 
-  m_sslLockArray = (CCriticalSection **)malloc(CRYPTO_num_locks() *
-                                            sizeof(CCriticalSection*));
-  for (i=0; i<CRYPTO_num_locks(); i++)
+  m_sslLockArray = new CCriticalSection*[CRYPTO_num_locks()];
+  for (int i=0; i<CRYPTO_num_locks(); i++)
     m_sslLockArray[i] = new CCriticalSection;  
  
   crypto_set_id_callback((unsigned long (*)())ssl_thread_id);
@@ -111,16 +116,14 @@ void DllLibCurlGlobal::Unload()
     // close libcurl
     global_cleanup();
 
-#if defined(TARGET_ANDROID) || defined(TARGET_DARWIN_OSX) || defined(TARGET_DARWIN_IOS)
+#if defined(HAS_CURL_STATIC)
     // Cleanup ssl locking array
-    int i;
- 
     crypto_set_id_callback(NULL);
     crypto_set_locking_callback(NULL);
-    for (i=0; i<CRYPTO_num_locks(); i++)
+    for (int i=0; i<CRYPTO_num_locks(); i++)
       delete m_sslLockArray[i];
  
-    free(m_sslLockArray);
+    delete[] m_sslLockArray;
 #endif
     
     DllDynamic::Unload();
