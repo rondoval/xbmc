@@ -256,10 +256,13 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
   m_info.m_dataFormats.clear();
   m_info.m_sampleRates.clear();
 
+  m_info.m_deviceType = AE_DEVTYPE_PCM;
+#if defined(HAS_LIBAMCODEC)
   // AML devices can do passthough
   // RK3188 can do passthrough too
   m_info.m_deviceType = AE_DEVTYPE_HDMI;
-
+    m_info.m_dataFormats.push_back(AE_FMT_AC3);
+    m_info.m_dataFormats.push_back(AE_FMT_DTS);
   m_info.m_deviceName = "AudioTrack";
   m_info.m_displayName = "android";
   m_info.m_displayNameExtra = "audiotrack";
