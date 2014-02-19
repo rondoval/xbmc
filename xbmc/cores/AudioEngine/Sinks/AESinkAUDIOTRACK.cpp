@@ -235,7 +235,6 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
   // AML devices can do passthough
   // RK3188 can do passthrough too
   m_info.m_deviceType = AE_DEVTYPE_HDMI;
-
   m_info.m_deviceName = "AudioTrack";
   m_info.m_displayName = "android";
   m_info.m_displayNameExtra = "audiotrack";
@@ -243,6 +242,8 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
   m_info.m_channels += AE_CH_FR;
   m_info.m_sampleRates.push_back(CJNIAudioTrack::getNativeOutputSampleRate(CJNIAudioManager::STREAM_MUSIC));
   m_info.m_dataFormats.push_back(AE_FMT_S16LE);
+  m_info.m_dataFormats.push_back(AE_FMT_AC3);
+  m_info.m_dataFormats.push_back(AE_FMT_DTS);
 #if 0 //defined(__ARM_NEON__)
   if (g_cpuInfo.GetCPUFeatures() & CPU_FEATURE_NEON)
     m_info.m_dataFormats.push_back(AE_FMT_FLOAT);
