@@ -632,7 +632,7 @@ unsigned int CAESinkDARWINOSX::AddPackets(uint8_t *data, unsigned int frames, bo
     // we are using a timer here for beeing sure for timeouts
     // condvar can be woken spuriously as signaled
     XbmcThreads::EndTime timer(timeout);
-    condVar.wait(lock, timeout);
+    condVar.wait(mutex, timeout);
     if (!m_started && timer.IsTimePast())
       return INT_MAX;    
   }
@@ -647,11 +647,21 @@ unsigned int CAESinkDARWINOSX::AddPackets(uint8_t *data, unsigned int frames, bo
 void CAESinkDARWINOSX::Drain()
 {
   int bytes = m_buffer->GetReadSize();
-  while (bytes)
+  int totalBytes = bytes;
+  int maxNumTimeouts = 3;
+  unsigned int timeout = 900 * bytes / (m_format.m_sampleRate * m_format.m_frameSize);
+  while (bytes && maxNumTimeouts > 0)
   {
     CSingleLock lock(mutex);
-    condVar.wait(mutex, 900 * bytes / (m_format.m_sampleRate * m_format.m_frameSize));
+    XbmcThreads::EndTime timer(timeout);
+    condVar.wait(mutex, timeout);
+
     bytes = m_buffer->GetReadSize();
+    // if we timeout and don't
+    // consum bytes - decrease maxNumTimeouts
+    if (timer.IsTimePast() && bytes == totalBytes)
+      maxNumTimeouts--;
+    totalBytes = bytes;
   }
 }
 
@@ -661,6 +671,21 @@ void CAESinkDARWINOSX::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
   list.clear();
   for (CADeviceList::const_iterator i = s_devices.begin(); i != s_devices.end(); ++i)
     list.push_back(i->second);
+}
+
+inline void LogLevel(unsigned int got, unsigned int wanted)
+{
+  static unsigned int lastReported = INT_MAX;
+  if (got != wanted)
+  {
+    if (got != lastReported)
+    {
+      CLog::Log(LOGWARNING, "DARWINOSX: %sflow (%u vs %u bytes)", got > wanted ? "over" : "under", got, wanted);
+      lastReported = got;
+    }    
+  }
+  else
+    lastReported = INT_MAX; // indicate we were good at least once
 }
 
 OSStatus CAESinkDARWINOSX::renderCallback(AudioDeviceID inDevice, const AudioTimeStamp* inNow, const AudioBufferList* inInputData, const AudioTimeStamp* inInputTime, AudioBufferList* outOutputData, const AudioTimeStamp* inOutputTime, void* inClientData)
@@ -692,8 +717,7 @@ OSStatus CAESinkDARWINOSX::renderCallback(AudioDeviceID inDevice, const AudioTim
       unsigned int wanted = outOutputData->mBuffers[i].mDataByteSize;
       unsigned int bytes = std::min(sink->m_buffer->GetReadSize(), wanted);
       sink->m_buffer->Read((unsigned char*)outOutputData->mBuffers[i].mData, bytes);
-      if (bytes != wanted)
-        CLog::Log(LOGERROR, "%s: %sFLOW (%i vs %i) bytes", __FUNCTION__, bytes > wanted ? "OVER" : "UNDER", bytes, wanted);
+      LogLevel(bytes, wanted);
     }
 
     // tell the sink we're good for more data
