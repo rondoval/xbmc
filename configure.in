@@ -729,9 +729,9 @@ AC_SUBST([DARWIN_NATIVE_ARCH])
 if test "$target_platform" = "target_android" ; then
   USE_ANDROID=1
   webserver_checkdepends=yes
-  CFLAGS="$CFLAGS -Wno-psabi"
+  CFLAGS="$CFLAGS -Wno-psabi -mcpu=cortex-a9 -mfpu=neon-fp16 -mfloat-abi=softfp"
   DROID_DVDLIB_SEEK64="-D_FILE_OFFSET_BITS=64 -D_OFF_T_DEFINED_ -Doff_t=off64_t -Dlseek=lseek64"
-  CXXFLAGS="$CXXFLAGS -Wno-psabi"
+  CXXFLAGS="$CXXFLAGS -Wno-psabi -mcpu=cortex-a9 -mfpu=neon-fp16 -mfloat-abi=softfp"
   AC_DEFINE(HAS_EGLGLES, [1], [Define if supporting EGL based GLES Framebuffer])
 fi
 
@@ -809,8 +809,8 @@ if test "$use_optimizations" = "yes"; then
     CXXFLAGS="$CXXFLAGS"
     CFLAGS="$CFLAGS"
   else
-    CXXFLAGS="-O2 $CXXFLAGS"
-    CFLAGS="-O2 $CFLAGS"
+    CXXFLAGS="-O3 $CXXFLAGS"
+    CFLAGS="-O3 $CFLAGS"
   fi
 else
   final_message="$final_message\n  Optimization:\tNo"
@@ -868,9 +868,9 @@ elif test "$use_arch" = "arm"; then
         use_cpu=cortex-a8])
   else
     if test "$use_neon" = "yes"; then 
-      CFLAGS="$CFLAGS -mfpu=neon -mvectorize-with-neon-quad"
-      CXXFLAGS="$CXXFLAGS -mfpu=neon -mvectorize-with-neon-quad"
-      FFMPEG_EXTRACFLAGS="$FFMPEG_EXTRACFLAGS -mfpu=neon"
+      CFLAGS="$CFLAGS -mfpu=neon-fp16 -mvectorize-with-neon-quad"
+      CXXFLAGS="$CXXFLAGS -mfpu=neon-fp16 -mvectorize-with-neon-quad"
+      FFMPEG_EXTRACFLAGS="$FFMPEG_EXTRACFLAGS -mfpu=neon-fp16"
     fi
   fi
 fi
