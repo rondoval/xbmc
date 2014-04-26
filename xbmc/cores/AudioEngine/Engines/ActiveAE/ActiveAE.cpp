@@ -122,6 +122,7 @@ float CEngineStats::GetCacheTotal(CActiveAEStream *stream)
 
 float CEngineStats::GetWaterLevel()
 {
+  CSingleLock lock(m_lock);
   return (float)m_bufferedSamples / m_sinkSampleRate;
 }
 
@@ -1169,7 +1170,9 @@ void CActiveAE::Configure(AEAudioFormat *desiredFmt)
 
   // resample buffers for sink
   if (m_sinkBuffers && 
-     (!CompareFormat(m_sinkBuffers->m_format,m_sinkFormat) || !CompareFormat(m_sinkBuffers->m_inputFormat, sinkInputFormat)))
+     (!CompareFormat(m_sinkBuffers->m_format,m_sinkFormat) ||
+      !CompareFormat(m_sinkBuffers->m_inputFormat, sinkInputFormat) ||
+      m_sinkBuffers->m_format.m_frames != m_sinkFormat.m_frames))
   {
     m_discardBufferPools.push_back(m_sinkBuffers);
     m_sinkBuffers = NULL;
@@ -1980,18 +1983,18 @@ bool CActiveAE::RunStages()
         }
       }
     }
+  }
 
-    // serve sink buffers
-    busy = m_sinkBuffers->ResampleBuffers();
-    while(!m_sinkBuffers->m_outputSamples.empty())
-    {
-      CSampleBuffer *out = NULL;
-      out = m_sinkBuffers->m_outputSamples.front();
-      m_sinkBuffers->m_outputSamples.pop_front();
-      m_sink.m_dataPort.SendOutMessage(CSinkDataProtocol::SAMPLE,
-          &out, sizeof(CSampleBuffer*));
-      busy = true;
-    }
+  // serve sink buffers
+  busy |= m_sinkBuffers->ResampleBuffers();
+  while(!m_sinkBuffers->m_outputSamples.empty())
+  {
+    CSampleBuffer *out = NULL;
+    out = m_sinkBuffers->m_outputSamples.front();
+    m_sinkBuffers->m_outputSamples.pop_front();
+    m_sink.m_dataPort.SendOutMessage(CSinkDataProtocol::SAMPLE,
+        &out, sizeof(CSampleBuffer*));
+    busy = true;
   }
 
   return busy;
